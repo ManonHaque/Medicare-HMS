@@ -4,6 +4,7 @@
 ![Project Image](https://i.ibb.co.com/fzKWhJYd/Screenshot-2026-05-06-142642.png)
 
 ## Create a folder in your local storage and open cmd in this folder
+![Project Image](https://i.ibb.co.com/gbqHFjfQ/Screenshot-2026-05-06-143805.png)
 
 ## In your cmd , write this 
 ```bash
