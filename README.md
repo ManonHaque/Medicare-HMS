@@ -1,7 +1,7 @@
 # How to Run the Project
 
 ## Go to code segment of this project and copy the https link
-![Project Image](https://ibb.co.com/cSp9Gqch)
+![Project Image](https://i.ibb.co.com/fzKWhJYd/Screenshot-2026-05-06-142642.png)
 
 ## Create a folder in your local storage and open cmd in this folder
 
