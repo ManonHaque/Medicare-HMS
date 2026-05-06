@@ -1,0 +1,31 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-900: #1e3a8a;
+}
+
+html,
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Print styles for PDF generation */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+  .print-area {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
