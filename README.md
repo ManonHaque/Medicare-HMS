@@ -1,5 +1,21 @@
-* How to run the project
-Open your terminal in this project
-Write npm install in the terminal 
-Then, write npm run dev 
-This project will be alive in port 3000
+# How to Run the Project
+
+Open your terminal in this project directory.
+
+## Install Dependencies
+
+```bash
+npm install
+```
+
+## Run the Development Server
+
+```bash
+npm run dev
+```
+
+The project will run on port `3000`.
+
+```bash
+http://localhost:3000
+```
