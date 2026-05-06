@@ -22,6 +22,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [activeRole, setActiveRole] = useState(null)
   const [selectedUser, setSelectedUser] = useState("")
+  const [selectedHospital, setSelectedHospital] = useState("")
 
   if (!hydrated) return <div className="p-8 text-slate-500">Loading...</div>
 
@@ -38,8 +39,15 @@ export default function LoginPage() {
   }
 
   const handleLogin = () => {
-    if (!activeRole || !selectedUser) return
-    login(activeRole, selectedUser)
+    if (!activeRole) return
+    if (activeRole === "admin") {
+      if (!selectedHospital) return
+      localStorage.setItem("admin_hospital_id", selectedHospital)
+      login(activeRole, "admin1")
+    } else {
+      if (!selectedUser) return
+      login(activeRole, selectedUser)
+    }
     const routes = {
       doctor: "/doctor",
       patient: "/patient",
@@ -91,27 +99,47 @@ export default function LoginPage() {
                   &larr; Back to roles
                 </button>
 
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1 block">
-                    Select user
-                  </label>
-                  <select
-                    value={selectedUser}
-                    onChange={(e) => setSelectedUser(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Choose...</option>
-                    {getUsersForRole(activeRole).map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {activeRole === "admin" ? (
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 mb-1 block">
+                      Select hospital
+                    </label>
+                    <select
+                      value={selectedHospital}
+                      onChange={(e) => setSelectedHospital(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Choose hospital...</option>
+                      {data.hospitals.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 mb-1 block">
+                      Select user
+                    </label>
+                    <select
+                      value={selectedUser}
+                      onChange={(e) => setSelectedUser(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Choose...</option>
+                      {getUsersForRole(activeRole).map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <button
                   onClick={handleLogin}
-                  disabled={!selectedUser}
+                  disabled={activeRole === "admin" ? !selectedHospital : !selectedUser}
                   className="w-full py-2.5 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 disabled:opacity-50"
                 >
                   Login as {activeRole}
