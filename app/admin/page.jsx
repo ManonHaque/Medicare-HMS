@@ -127,6 +127,7 @@ function AdminContent() {
       {tab === "nurses" && <NursesTab hospitalId={hospitalId} />}
       {tab === "appointments" && (
         <AppointmentsTab
+          hospitalId={hospitalId}
           initialPatientId={appointmentSeed}
           autoOpen={appointmentAutoOpen}
           onAutoOpenHandled={() => setAppointmentAutoOpen(false)}
@@ -1051,7 +1052,7 @@ function NurseEditModal({ nurse, onClose, onSave }) {
   )
 }
 
-function AppointmentsTab({ initialPatientId, autoOpen, onAutoOpenHandled }) {
+function AppointmentsTab({ hospitalId, initialPatientId, autoOpen, onAutoOpenHandled }) {
   const { data, addItem, updateItem, removeItem } = useStore()
   const [showCreate, setShowCreate] = useState(false)
   const [seedPatientId, setSeedPatientId] = useState("")
@@ -1143,6 +1144,7 @@ function AppointmentsTab({ initialPatientId, autoOpen, onAutoOpenHandled }) {
           </thead>
           <tbody>
             {data.appointments
+              .filter((a) => (!hospitalId ? true : !a.hospitalId || a.hospitalId === hospitalId))
               .filter((a) => (!filterDate ? true : a.date === filterDate))
               .filter((a) => (!filterDoctor ? true : a.doctorId === filterDoctor))
               .filter((a) => (!filterDepartment ? true : a.department === filterDepartment))
@@ -1194,9 +1196,10 @@ function AppointmentsTab({ initialPatientId, autoOpen, onAutoOpenHandled }) {
           patients={data.patients}
           doctors={data.doctors}
           initialPatientId={seedPatientId}
+          hospitalId={hospitalId}
           onClose={() => setShowCreate(false)}
           onSave={(form) => {
-            addItem("appointments", { ...form, status: "Scheduled" })
+            addItem("appointments", { ...form, hospitalId, status: "Scheduled" })
             setShowCreate(false)
           }}
         />
@@ -1282,7 +1285,7 @@ function EditAppointmentModal({ appointment, doctors, patients, onClose, onSave 
   )
 }
 
-function CreateAppointmentModal({ patients, doctors, initialPatientId, onClose, onSave }) {
+function CreateAppointmentModal({ patients, doctors, initialPatientId, hospitalId, onClose, onSave }) {
   const [query, setQuery] = useState("")
   const [form, setForm] = useState({
     patientId: initialPatientId || "",

@@ -3,15 +3,11 @@
 import Link from "next/link"
 import DashboardLayout from "@/components/DashboardLayout"
 import { useStore } from "@/lib/store"
-
-const NAV = [
-  { href: "/doctor", label: "Today's Appointments" },
-  { href: "/doctor/icu", label: "ICU Patients" },
-]
+import { DOCTOR_NAV } from "@/components/doctor/doctor-nav"
 
 export default function ICUListPage() {
   return (
-    <DashboardLayout role="doctor" title="ICU Patients" navItems={NAV}>
+    <DashboardLayout role="doctor" title="ICU Patients" navItems={DOCTOR_NAV}>
       <ICUList />
     </DashboardLayout>
   )
