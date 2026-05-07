@@ -85,6 +85,12 @@ export default function ConsultationScreen({ appointmentId }) {
       .sort((a, b) => String(b.uploadedAt || "").localeCompare(String(a.uploadedAt || "")))
   }, [data.reports, patient])
 
+  const pdfHospital = useMemo(() => {
+    if (hospital) return hospital
+    const fallback = (data.hospitals || [])[0]
+    return fallback || { name: appointment?.hospitalId || "Hospital" }
+  }, [hospital, data.hospitals, appointment?.hospitalId])
+
   if (!appointment || !patient) {
     return (
       <div className="text-slate-500">
@@ -95,12 +101,6 @@ export default function ConsultationScreen({ appointmentId }) {
       </div>
     )
   }
-
-  const pdfHospital = useMemo(() => {
-    if (hospital) return hospital
-    const fallback = (data.hospitals || [])[0]
-    return fallback || { name: appointment?.hospitalId || "Hospital" }
-  }, [hospital, data.hospitals, appointment?.hospitalId])
 
   const openPdfForPrescription = (p) => {
     const html = buildPrescriptionPdfHtml({ hospital: pdfHospital, doctor, patient, prescription: p })

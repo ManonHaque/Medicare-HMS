@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import DashboardLayout from "@/components/DashboardLayout"
 import DoctorTopSection from "@/components/doctor/DoctorTopSection"
 import { DOCTOR_NAV } from "@/components/doctor/doctor-nav"
@@ -7,13 +8,6 @@ import { useDoctorHospital } from "@/components/doctor/useDoctorHospital"
 import { useStore } from "@/lib/store"
 import { getDoctorById } from "@/data/doctors"
 import { getPatientById } from "@/data/patients"
-
-const CABINS = [
-  { id: "cabin-101", hospitalId: "h1", cabinNo: "C-101", patientId: "p1", doctorId: "d1", status: "Admitted" },
-  { id: "cabin-102", hospitalId: "h1", cabinNo: "C-102", patientId: null, doctorId: null, status: "Available" },
-  { id: "cabin-201", hospitalId: "h2", cabinNo: "C-201", patientId: "p2", doctorId: "d1", status: "Admitted" },
-  { id: "cabin-202", hospitalId: "h2", cabinNo: "C-202", patientId: null, doctorId: null, status: "Available" },
-]
 
 export default function DoctorCabinsPage() {
   return (
@@ -25,7 +19,7 @@ export default function DoctorCabinsPage() {
 
 function CabinsScreen() {
   const { data, auth } = useStore()
-  const storeDoctor = data.doctors.find((d) => d.id === auth.userId)
+  const storeDoctor = data.doctors.find((doctor) => doctor.id === auth.userId)
   const doctor = { ...storeDoctor, ...(getDoctorById(auth.userId) || {}) }
 
   const { hospitalId, setHospitalId } = useDoctorHospital({
@@ -33,7 +27,13 @@ function CabinsScreen() {
     hospitals: data.hospitals,
   })
 
-  const list = CABINS.filter((c) => !hospitalId || c.hospitalId === hospitalId)
+  const assignedCabinAdmissions = (data.cabinPatients || [])
+    .filter((admission) => admission.status !== "Discharged")
+    .filter((admission) => isAssignedToDoctor(admission, auth.userId))
+  const cabinAdmissions = assignedCabinAdmissions.filter(
+    (admission) => !hospitalId || admission.hospitalId === hospitalId
+  )
+  const visibleCabinAdmissions = cabinAdmissions
 
   return (
     <div className="space-y-4">
@@ -42,64 +42,66 @@ function CabinsScreen() {
         hospitals={data.hospitals}
         hospitalId={hospitalId}
         setHospitalId={setHospitalId}
-        todayCount={0}
+        todayCount={visibleCabinAdmissions.length}
         navItems={DOCTOR_NAV}
       />
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200">
-          <h2 className="text-sm font-semibold text-slate-900">Cabin Patients</h2>
-          <p className="text-xs text-slate-500">Compact ward round view (demo data)</p>
-        </div>
-
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-left">
-            <tr>
-              <th className="p-3">Cabin No</th>
-              <th className="p-3">Assigned Patient</th>
-              <th className="p-3">Assigned Doctor</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((c) => {
-              const storePatient = c.patientId ? data.patients.find((p) => p.id === c.patientId) : null
-              const patient = storePatient ? { ...storePatient, ...(getPatientById(storePatient.id) || {}) } : null
-
-              const storeAssignedDoctor = c.doctorId ? data.doctors.find((d) => d.id === c.doctorId) : null
-              const assignedDoctor = storeAssignedDoctor
-                ? { ...storeAssignedDoctor, ...(getDoctorById(storeAssignedDoctor.id) || {}) }
-                : null
-
-              return (
-                <tr key={c.id} className="border-t border-slate-200">
-                  <td className="p-3 font-mono">{c.cabinNo}</td>
-                  <td className="p-3">
-                    {patient ? (
-                      <div className="leading-tight">
-                        <div className="font-medium text-slate-900">{patient.name}</div>
-                        <div className="text-xs text-slate-500">{patient.age ?? "—"} yrs • {patient.phone || "—"}</div>
-                      </div>
-                    ) : (
-                      <span className="text-slate-500">—</span>
-                    )}
-                  </td>
-                  <td className="p-3">{assignedDoctor?.name || <span className="text-slate-500">—</span>}</td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        c.status === "Admitted" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      {c.status}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Active Cabin Patients ({visibleCabinAdmissions.length})
+        </h2>
       </div>
+
+      {visibleCabinAdmissions.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500">
+          No cabin patients assigned to you.
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {visibleCabinAdmissions.map((admission) => {
+            const storePatient = data.patients.find((patient) => patient.id === admission.patientId)
+            const patient = storePatient ? { ...storePatient, ...(getPatientById(storePatient.id) || {}) } : null
+            const bed = data.beds.find((item) => item.id === admission.bedId)
+            const hospital = data.hospitals.find((item) => item.id === admission.hospitalId)
+
+            return (
+              <Link
+                key={admission.id}
+                href={`/doctor/cabins/${admission.id}`}
+                className="bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-400 hover:shadow-sm transition-all"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-slate-900">{patient?.name || "Patient"}</h3>
+                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded font-medium">
+                    Cabin
+                  </span>
+                </div>
+                <p className="text-sm text-slate-500">
+                  Cabin {bed?.number || admission.bedNumber || "-"} - {hospital?.name}
+                </p>
+                <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                  <Info label="Age" value={patient?.age ? `${patient.age} yrs` : "-"} />
+                  <Info label="Phone" value={patient?.phone || "-"} />
+                  <Info label="Status" value={admission.status || "Active"} />
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
+}
+
+function Info({ label, value }) {
+  return (
+    <div className="bg-slate-50 rounded p-2">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-sm font-semibold text-slate-900 truncate">{value}</p>
+    </div>
+  )
+}
+
+function isAssignedToDoctor(admission, doctorId) {
+  return admission.doctorId === doctorId || (admission.doctorIds || []).includes(doctorId)
 }

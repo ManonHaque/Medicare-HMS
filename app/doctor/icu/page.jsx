@@ -15,7 +15,9 @@ export default function ICUListPage() {
 
 function ICUList() {
   const { data, auth } = useStore()
-  const myICU = data.icuPatients.filter((ip) => ip.doctorId === auth.userId)
+  const myICU = (data.icuPatients || [])
+    .filter((ip) => ip.status !== "Discharged")
+    .filter((ip) => isAssignedToDoctor(ip, auth.userId))
 
   return (
     <div className="space-y-4">
@@ -60,6 +62,10 @@ function ICUList() {
       )}
     </div>
   )
+}
+
+function isAssignedToDoctor(admission, doctorId) {
+  return admission.doctorId === doctorId || (admission.doctorIds || []).includes(doctorId)
 }
 
 function Vital({ label, value }) {

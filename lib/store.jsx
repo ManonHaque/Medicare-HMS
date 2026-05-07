@@ -9,6 +9,19 @@ function generateId(prefix = "id") {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 }
 
+function isLegacyDemoAdmission(item) {
+  return Boolean(item?.id && String(item.id).startsWith("demo-"))
+}
+
+function sanitizeHydratedData(rawData) {
+  return {
+    ...rawData,
+    icuPatients: (rawData?.icuPatients || []).filter((item) => !isLegacyDemoAdmission(item)),
+    cabinPatients: (rawData?.cabinPatients || []).filter((item) => !isLegacyDemoAdmission(item)),
+    wardPatients: (rawData?.wardPatients || []).filter((item) => !isLegacyDemoAdmission(item)),
+  }
+}
+
 export function StoreProvider({ children }) {
   const [data, setData] = useState(seedData)
   const [auth, setAuth] = useState(null)
@@ -21,7 +34,7 @@ export function StoreProvider({ children }) {
       if (raw) {
         const parsed = JSON.parse(raw)
         // Merge to ensure new seed keys exist
-        setData({ ...seedData, ...parsed })
+        setData(sanitizeHydratedData({ ...seedData, ...parsed }))
       } else {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(seedData))
       }
