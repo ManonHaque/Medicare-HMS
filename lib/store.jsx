@@ -9,6 +9,28 @@ function generateId(prefix = "id") {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 }
 
+function mergeSeedArrays(seedArray = [], storedArray = []) {
+  const byId = new Map()
+  seedArray.forEach((item) => {
+    if (item && item.id) byId.set(item.id, item)
+  })
+  storedArray.forEach((item) => {
+    if (item && item.id) byId.set(item.id, item)
+    else byId.set(Symbol("item"), item)
+  })
+  return Array.from(byId.values())
+}
+
+function mergeSeedData(seed, stored) {
+  const merged = { ...seed, ...stored }
+  Object.keys(seed).forEach((key) => {
+    if (Array.isArray(seed[key]) && Array.isArray(stored?.[key])) {
+      merged[key] = mergeSeedArrays(seed[key], stored[key])
+    }
+  })
+  return merged
+}
+
 function isLegacyDemoAdmission(item) {
   return Boolean(item?.id && String(item.id).startsWith("demo-"))
 }
@@ -34,7 +56,7 @@ export function StoreProvider({ children }) {
       if (raw) {
         const parsed = JSON.parse(raw)
         // Merge to ensure new seed keys exist
-        setData(sanitizeHydratedData({ ...seedData, ...parsed }))
+        setData(sanitizeHydratedData(mergeSeedData(seedData, parsed)))
       } else {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(seedData))
       }
