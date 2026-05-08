@@ -1,205 +1,201 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import DashboardLayout from "@/components/DashboardLayout"
-import { useStore } from "@/lib/store"
-
-const NAV = [{ href: "/nurse", label: "Tasks" }]
+import { useEffect, useState } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import NurseDashboard from "@/components/nurse/NurseDashboard";
+import { useStore } from "@/lib/store";
+import { NURSE_NAV } from "@/components/nurse/nurse-nav";
+import { generateNurseTasks } from "@/data/nurseTasks";
+import { icuPatientsData, getICUPatientsForNurse } from "@/data/icuPatients";
 
 export default function NursePage() {
   return (
-    <DashboardLayout role="nurse" title="Nurse Dashboard" navItems={NAV}>
+    <DashboardLayout
+      role="nurse"
+      title="🏥 ICU Nurse Dashboard"
+      navItems={NURSE_NAV}
+    >
       <NurseContent />
     </DashboardLayout>
-  )
+  );
 }
 
 function NurseContent() {
-  const { auth, data, updateItem, addItem } = useStore()
-  const [noteFor, setNoteFor] = useState(null)
-  const [noteText, setNoteText] = useState("")
+  const { auth, data } = useStore();
+  const [generatedTasks, setGeneratedTasks] = useState([]);
+  const [enhancedICUPatients, setEnhancedICUPatients] = useState([]);
 
-  const myTasks = data.nurseTasks.filter((t) => t.nurseId === auth.userId)
-  const grouped = myTasks.reduce((acc, t) => {
-    const time = t.time || "unscheduled"
-    if (!acc[time]) acc[time] = []
-    acc[time].push(t)
-    return acc
-  }, {})
-  const sortedTimes = Object.keys(grouped).sort()
+  // Get the current nurse from store
+  const nurse = data.nurses.find((n) => n.id === auth.userId);
 
-  const myICU = data.icuPatients.filter((ip) => ip.nurseId === auth.userId)
-  const lowSpo2 = myICU.find((ip) => (ip.vitals?.spo2 || 100) < 95)
+  // Enhance ICU patients with additional data
+  useEffect(() => {
+    if (data.patients.length > 0 && data.icuPatients.length > 0) {
+      // Map demo ICU patients to enhanced data
+      const enhanced = data.icuPatients.map((icu) => {
+        const patient = data.patients.find((p) => p.id === icu.patientId);
+        const doctor = data.doctors.find((d) => d.id === icu.doctorIds?.[0]);
 
-  const updateStatus = (taskId, status) => {
-    updateItem("nurseTasks", taskId, {
-      status,
-      [status === "Completed" ? "completedAt" : "updatedAt"]: new Date().toISOString(),
-    })
-  }
+        // Get nurse assignments
+        const nursesAssigned = icu.nurseIds
+          ? icu.nurseIds
+              .map((nId) => {
+                const n = data.nurses.find((x) => x.id === nId);
+                return n ? { id: n.id, name: n.name, shift: n.shift } : null;
+              })
+              .filter(Boolean)
+          : [];
 
-  const saveNote = () => {
-    if (!noteFor || !noteText.trim()) return
-    updateItem("nurseTasks", noteFor.id, { note: noteText })
-    setNoteFor(null)
-    setNoteText("")
+        return {
+          id: icu.id,
+          bedNumber: icu.bedId
+            ? data.beds.find((b) => b.id === icu.bedId)?.number
+            : "ICU-0",
+          status:
+            Math.random() > 0.6
+              ? "Critical"
+              : Math.random() > 0.5
+                ? "Observation"
+                : "Stable",
+          patientId: icu.patientId,
+          patientName: patient?.name || "Unknown Patient",
+          age: patient?.age,
+          gender: patient?.gender,
+          phone: patient?.phone,
+          bloodGroup: patient?.bloodGroup,
+          allergies: patient?.allergies || [],
+          chronicConditions: patient?.chronicConditions || [],
+          admissionDate: icu.admittedAt || new Date().toISOString(),
+          doctor: doctor
+            ? { id: doctor.id, name: doctor.name, specialty: doctor.specialty }
+            : null,
+          nursesAssigned,
+          vitals: icu.vitals || {
+            bp: `${120 + Math.floor(Math.random() * 30)}/${70 + Math.floor(Math.random() * 30)}`,
+            hr: 70 + Math.floor(Math.random() * 40),
+            spo2: 94 + Math.floor(Math.random() * 6),
+            temp: 98.4 + (Math.random() - 0.5) * 2,
+            rr: 16 + Math.floor(Math.random() * 12),
+            glucose: 100 + Math.floor(Math.random() * 80),
+            lastUpdated: new Date().toISOString(),
+            updatedBy: nursesAssigned?.[0]?.name || "Nurse",
+          },
+          vitalsTrend: [
+            { time: "06:00", spo2: 96, bp: "128/80" },
+            { time: "08:00", spo2: 95, bp: "130/82" },
+            { time: "10:00", spo2: 94, bp: "132/84" },
+          ],
+          currentPrescriptions: [
+            {
+              id: "px-1",
+              medicine: "Cef-3 (Cefixime)",
+              dosage: "200mg",
+              frequency: "IV Every 8 hours",
+              route: "IV",
+              indication: "Infection control",
+            },
+            {
+              id: "px-2",
+              medicine: "Napa (Paracetamol)",
+              dosage: "500mg",
+              frequency: "Oral Twice daily",
+              route: "Oral",
+              indication: "Fever",
+            },
+            {
+              id: "px-3",
+              medicine: "Seclo (Omeprazole)",
+              dosage: "20mg",
+              frequency: "Oral Once daily",
+              route: "Oral",
+              indication: "GI protection",
+            },
+          ],
+          testOrders: [
+            {
+              id: "t1",
+              name: "Complete Blood Count",
+              status: "Pending",
+              orderedTime: new Date().toISOString(),
+            },
+            {
+              id: "t2",
+              name: "Chest X-Ray",
+              status: "Completed",
+              result: "Normal",
+            },
+          ],
+          alerts:
+            Math.random() > 0.7
+              ? [
+                  {
+                    type: "SpO2 Low",
+                    severity: "High",
+                    message: "Oxygen saturation dropping",
+                    time: new Date(Date.now() - 300000).toISOString(),
+                  },
+                ]
+              : [],
+          medicalHistory:
+            "Admitted with critical condition, responding to treatment",
+          medicineRequestStatus: {},
+        };
+      });
+
+      setEnhancedICUPatients(enhanced);
+    }
+  }, [data.patients, data.icuPatients, data.doctors, data.nurses, data.beds]);
+
+  // Generate nurse tasks based on shift
+  useEffect(() => {
+    if (nurse && enhancedICUPatients.length > 0) {
+      const tasks = generateNurseTasks(
+        enhancedICUPatients,
+        data.nurses,
+        data.medicines,
+      );
+
+      // Filter tasks by nurse and shift
+      const shiftTasks = tasks.filter((t) => {
+        const nurseShift = nurse.shift;
+        const taskHour = parseInt(t.time.split(":")[0]);
+
+        // Check if task is within nurse's shift
+        if (nurseShift === "Day") return taskHour >= 6 && taskHour < 18;
+        if (nurseShift === "Night") return taskHour >= 18 || taskHour < 6;
+        return false;
+      });
+
+      setGeneratedTasks(shiftTasks);
+    }
+  }, [nurse, enhancedICUPatients, data.nurses, data.medicines]);
+
+  if (
+    !nurse ||
+    (generatedTasks.length === 0 && enhancedICUPatients.length === 0)
+  ) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <p className="text-blue-900 font-medium">
+            Loading ICU Nurse Dashboard...
+          </p>
+          <p className="text-blue-700 text-sm mt-2">
+            Please wait while we fetch patient and task data
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* AI Monitoring Panel - top, always visible */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl p-5">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">AI Monitoring Panel</h3>
-          <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Live</span>
-        </div>
-        <p className="text-sm text-blue-100 mb-3">
-          Monitoring {myICU.length} ICU patient{myICU.length !== 1 ? "s" : ""}
-        </p>
-        {lowSpo2 ? (
-          <div className="bg-red-500/20 border border-red-300 rounded-md p-3 text-sm">
-            <strong>EMERGENCY ALERT</strong>: Oxygen low for{" "}
-            {data.patients.find((p) => p.id === lowSpo2.patientId)?.name}
-          </div>
-        ) : (
-          <div className="bg-white/10 rounded-md p-3 text-sm">All patients stable</div>
-        )}
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900 mb-3">My Tasks ({myTasks.length})</h2>
-        {myTasks.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500">
-            No tasks assigned. Doctors will create tasks via ICU plans.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {sortedTimes.map((time) => (
-              <div key={time}>
-                <h3 className="text-sm font-medium text-slate-500 mb-2">
-                  {time === "unscheduled" ? "Unscheduled" : `Time: ${time}`}
-                </h3>
-                <div className="bg-white border border-slate-200 rounded-xl divide-y divide-slate-200">
-                  {grouped[time].map((t) => (
-                    <div key={t.id} className="p-4 flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              t.status === "Completed"
-                                ? "bg-green-50 text-green-700"
-                                : t.status === "Skipped"
-                                  ? "bg-slate-100 text-slate-600"
-                                  : t.status === "In Progress"
-                                    ? "bg-amber-50 text-amber-700"
-                                    : "bg-blue-50 text-blue-700"
-                            }`}
-                          >
-                            {t.status}
-                          </span>
-                          <span className="text-xs text-slate-400">{t.type}</span>
-                        </div>
-                        <p className="font-medium text-slate-900">{t.patientName}</p>
-                        <p className="text-sm text-slate-600">{t.description}</p>
-                        {t.note && (
-                          <p className="text-xs text-slate-500 mt-1 italic">Note: {t.note}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {t.status === "Pending" && (
-                          <button
-                            onClick={() => updateStatus(t.id, "In Progress")}
-                            className="px-2 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600"
-                          >
-                            Start
-                          </button>
-                        )}
-                        {t.status !== "Completed" && (
-                          <button
-                            onClick={() => updateStatus(t.id, "Completed")}
-                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
-                          >
-                            Confirm
-                          </button>
-                        )}
-                        {t.status === "Pending" && (
-                          <button
-                            onClick={() => updateStatus(t.id, "Skipped")}
-                            className="px-2 py-1 text-xs bg-slate-200 text-slate-700 rounded hover:bg-slate-300"
-                          >
-                            Skip
-                          </button>
-                        )}
-                        <button
-                          onClick={() => {
-                            setNoteFor(t)
-                            setNoteText(t.note || "")
-                          }}
-                          className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50"
-                        >
-                          Note
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900 mb-3">My ICU Patients</h2>
-        <div className="grid md:grid-cols-2 gap-3">
-          {myICU.map((ip) => {
-            const patient = data.patients.find((p) => p.id === ip.patientId)
-            return (
-              <div key={ip.id} className="bg-white border border-slate-200 rounded-xl p-4">
-                <h4 className="font-semibold text-slate-900">{patient?.name}</h4>
-                <p className="text-sm text-slate-500">
-                  {patient?.phone} · {patient?.age} yrs
-                </p>
-                <p className="text-xs text-slate-500 mt-2">
-                  Bed {data.beds.find((b) => b.id === ip.bedId)?.number}
-                </p>
-                <p className="text-xs text-slate-400 italic mt-1">
-                  View only - cannot modify prescriptions
-                </p>
-              </div>
-            )
-          })}
-          {myICU.length === 0 && <p className="text-sm text-slate-500">None assigned.</p>}
-        </div>
-      </div>
-
-      {noteFor && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="font-semibold text-slate-900 mb-3">Add Note</h3>
-            <textarea
-              rows={4}
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
-            />
-            <div className="flex gap-2 justify-end mt-4">
-              <button
-                onClick={() => setNoteFor(null)}
-                className="px-4 py-2 border border-slate-300 rounded-md hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveNote}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+    <NurseDashboard
+      nurse={nurse}
+      icuPatients={enhancedICUPatients}
+      tasks={generatedTasks}
+      patients={data.patients}
+      doctors={data.doctors}
+      hospitals={data.hospitals}
+    />
+  );
 }
